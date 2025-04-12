@@ -167,6 +167,22 @@ def train_gp_model(X_train, y_train, X_test, y_test, sequences_test,
     return metrics
 
 def main():
+    # Create figures directory structure
+    base_figures_dir = os.path.join(configs.training_configs.outputs_dir, "figures")
+    model_type = getattr(configs.model_configs, 'model_type', "BALM")
+    peft_method = "none"
+    if hasattr(configs.model_configs, 'peft_configs') and configs.model_configs.peft_configs.enabled:
+        peft_method = configs.model_configs.peft_configs.protein.method
+
+    # Create directories
+    figures_dirs = {
+        "training": os.path.join(base_figures_dir, "training", f"{model_type}_{peft_method}"),
+        "evaluation": os.path.join(base_figures_dir, "evaluation", f"{model_type}_{peft_method}"),
+        "comparison": os.path.join(base_figures_dir, "comparison")
+    }
+
+    for dir_path in figures_dirs.values():
+        os.makedirs(dir_path, exist_ok=True)
     try:
         # Parse arguments
         args = parse_args()

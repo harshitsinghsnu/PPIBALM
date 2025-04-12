@@ -1,0 +1,18 @@
+{
+    "data_path": "D:\\BALM_Fineclone\\BALM-PPI\\scripts\\notebooks\\Data.csv",
+    "balm_checkpoint": "D:\\BALM_Fineclone\\BALM-PPI\\outputs\\latest_checkpoint.pth",
+    "balm_config": "D:\\BALM_Fineclone\\BALM-PPI\\default_configs\\balm_peft.yaml",
+    "mint_checkpoint": "D:\\BALM_Fineclone\\BALM-PPI\\Benchmark\\models\\mint.ckpt",
+    "mint_config": "D:\\BALM_Fineclone\\BALM-PPI\\Benchmark\\scripts\\mint\\data\\esm2_t33_650M_UR50D.json",
+    "output_dir": "comprehensive_benchmark_results\\seq_similarity_split",
+    "batch_size": 2,
+    "num_runs": 3,
+    "seeds": [
+        42,
+        123,
+        456
+    ],
+    "split_type": "seq_similarity",
+    "train_ratio": 0.2,
+    "generate_plots": true
+}

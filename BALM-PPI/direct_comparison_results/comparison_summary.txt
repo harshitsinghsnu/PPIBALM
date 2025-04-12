@@ -1,0 +1,26 @@
+Model Comparison Summary
+======================
+
+BALM-PPI Metrics:
+  Rmse: 1.3005
+  Pearson: 0.8023
+  Spearman: 0.7955
+  Ci: 0.8040
+
+MINT Metrics:
+  Rmse: 7.7907
+  Pearson: 0.0837
+  Spearman: 0.1468
+  Ci: 0.5483
+
+Performance Difference (BALM - MINT):
+  Rmse: -6.4902
+  Pearson: 0.7186
+  Spearman: 0.6487
+  Ci: 0.2557
+
+Percentage Improvement:
+  RMSE: 83.31% better
+  Pearson: 858.60% better
+  Spearman: 441.92% better
+  Ci: 46.64% better

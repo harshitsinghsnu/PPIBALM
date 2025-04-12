@@ -1,0 +1,35 @@
+{
+  "timestamp": "20250330_180000",
+  "models": {
+    "BALM-PPI": {
+      "direct_metrics": {},
+      "embedding_metrics": {
+        "rmse": 1.5627758299398486,
+        "pearson": 0.7081802403230408,
+        "spearman": 0.7081397171813846,
+        "ci": 0.7635248187395427
+      },
+      "paths": {
+        "direct_results": "",
+        "embedding_results": "D:/BALM_Fineclone/BALM-PPI/Benchmark/results\\results\\BALM-PPI\\evaluation_results_20250330_180000.json"
+      }
+    },
+    "MINT": {
+      "direct_metrics": {},
+      "embedding_metrics": {
+        "rmse": 1.4872362462401512,
+        "pearson": 0.7390619928955724,
+        "spearman": 0.7373625698250215,
+        "ci": 0.7786450459955018
+      },
+      "paths": {
+        "direct_results": "",
+        "embedding_results": "D:/BALM_Fineclone/BALM-PPI/Benchmark/results\\results\\MINT\\evaluation_results_20250330_180000.json"
+      }
+    }
+  },
+  "comparison": {
+    "table_path": "D:/BALM_Fineclone/BALM-PPI/Benchmark/results\\results\\comparison\\comparison_table_20250330_180000.csv",
+    "visualization_path": "D:/BALM_Fineclone/BALM-PPI/Benchmark/results\\results\\comparison\\metrics_comparison_20250330_180000.png"
+  }
+}

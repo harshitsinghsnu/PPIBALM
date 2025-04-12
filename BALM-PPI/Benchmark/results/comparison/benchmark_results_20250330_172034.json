@@ -1,0 +1,28 @@
+{
+  "timestamp": "20250330_172034",
+  "models": {
+    "BALM-PPI": {
+      "metrics": {
+        "rmse": 1.5627758299398486,
+        "pearson": 0.7081802403230408,
+        "spearman": 0.7081397171813846,
+        "ci": 0.7635248187395427,
+        "model": "BALM-PPI"
+      },
+      "training": {
+        "best_params": {
+          "alpha": 100.0,
+          "fit_intercept": true
+        }
+      },
+      "paths": {
+        "results": "../results\\BALM-PPI\\evaluation_results_20250330_172034.json",
+        "predictions": "../results\\BALM-PPI\\predictions_20250330_172034.csv"
+      }
+    }
+  },
+  "comparison": {
+    "table_path": "../results/comparison\\comparison_table_20250330_172034.csv",
+    "visualization_path": "../results/comparison\\metrics_comparison_20250330_172034.png"
+  }
+}

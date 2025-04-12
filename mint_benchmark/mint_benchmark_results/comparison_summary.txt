@@ -1,0 +1,41 @@
+Benchmark with seed 42
+Data: D:\BALM_Fineclone\mint_benchmark\mint_benchmark_results\data\train.csv
+Test size: 0.8
+
+BALM Results:
+  RMSE: 1.4283
+  Pearson: 0.7549
+  Spearman: 0.7509
+  CI: 0.7815
+
+MINT Results:
+  RMSE: 1.4061
+  Pearson: 0.7616
+  Spearman: 0.7566
+  CI: 0.7837
+
+Comparison:
+  RMSE:
+    BALM: 1.4283
+    MINT: 1.4061
+    Diff: -0.0221 (-1.55%)
+    Better: MINT
+
+  Pearson:
+    BALM: 0.7549
+    MINT: 0.7616
+    Diff: 0.0067 (0.89%)
+    Better: MINT
+
+  Spearman:
+    BALM: 0.7509
+    MINT: 0.7566
+    Diff: 0.0057 (0.76%)
+    Better: MINT
+
+  CI:
+    BALM: 0.7815
+    MINT: 0.7837
+    Diff: 0.0022 (0.28%)
+    Better: MINT
+

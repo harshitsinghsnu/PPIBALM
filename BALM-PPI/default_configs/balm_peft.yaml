@@ -8,8 +8,8 @@ model_configs:
   model_hyperparameters:
     learning_rate: 0.001
     warmup_steps_ratio: 0.06
-    protein_max_seq_len: 2048
-    proteina_max_seq_len: 2048
+    protein_max_seq_len: 1024
+    proteina_max_seq_len: 1024
     gradient_accumulation_steps: 32
     projected_size: 256
     projected_dropout: 0.3
@@ -40,8 +40,8 @@ model_configs:
   
   # Training configuration
   loss_function: cosine_mse
-  pkd_lower_bound: -0.4
-  pkd_upper_bound: 5.0
+  pkd_lower_bound: 1.0
+  pkd_upper_bound: 16.0
 
 dataset_configs:
   dataset_name: BindingDB_filtered

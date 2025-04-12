@@ -1,0 +1,29 @@
+{
+  "output_dir": "../results",
+  "timestamp": "20250328_204645",
+  "dataset_path": "../../scripts/notebooks/Data.csv",
+  "test_size": 0.8,
+  "random_seeds": [
+    123,
+    456,
+    789
+  ],
+  "metrics": [
+    "pearson",
+    "rmse",
+    "spearman",
+    "ci"
+  ],
+  "models": {
+    "BALM-PPI": {
+      "type": "balm",
+      "config_path": "../../configs/esm_lora_cosinemse_training_1.yaml",
+      "checkpoint_path": "../../outputs/best_model.pth"
+    },
+    "MINT": {
+      "type": "mint",
+      "config_path": "../../data/esm2_t33_650M_UR50D.json",
+      "checkpoint_path": "../models/mint.ckpt"
+    }
+  }
+}

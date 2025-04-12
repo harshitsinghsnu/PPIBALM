@@ -1,0 +1,12 @@
+{
+    "model_name": "esm2_t33_650M_UR50D",
+    "backbone": "esm",
+    "encoder_layers": 33,
+    "encoder_embed_dim": 1280,
+    "encoder_attention_heads": 20,
+    "token_dropout": true,
+    "max_length": 2048,
+    "use_multimer": true,
+    "separate_chains": true,
+    "batch_size": 4
+  }

@@ -10,6 +10,9 @@ import seaborn as sns
 from tqdm import tqdm
 import wandb
 
+# Add the parent directory to the path (if needed)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from balm import common_utils
 from balm.configs import Configs
 from balm.models import BALM, BaselineModel
@@ -64,7 +67,9 @@ def main():
         
         # Load config
         try:
+            print(f"Loading configuration from {args.config_filepath}")
             configs = Configs(**common_utils.load_yaml(args.config_filepath))
+            print("Configuration loaded successfully")
         except Exception as e:
             print(f"Error loading config from {args.config_filepath}: {e}")
             return
@@ -72,13 +77,35 @@ def main():
         # Create output directory if it doesn't exist
         output_dir = args.output_dir if args.output_dir else os.path.dirname(args.checkpoint_path)
         os.makedirs(output_dir, exist_ok=True)
+        print(f"Output directory: {output_dir}")
+        
+        # Create figures directory structure
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        base_figures_dir = os.path.join(output_dir, "figures", timestamp)
+        model_type = getattr(configs.model_configs, 'model_type', "BALM")
+        peft_method = "none"
+        
+        if hasattr(configs.model_configs, 'peft_configs') and hasattr(configs.model_configs.peft_configs, 'enabled') and configs.model_configs.peft_configs.enabled:
+            if hasattr(configs.model_configs.peft_configs, 'protein') and hasattr(configs.model_configs.peft_configs.protein, 'method'):
+                peft_method = configs.model_configs.peft_configs.protein.method
+        
+        figures_dirs = {
+            "evaluation": os.path.join(base_figures_dir, "evaluation", f"{model_type}_{peft_method}"),
+            "predictions": os.path.join(base_figures_dir, "predictions")
+        }
+
+        for dir_path in figures_dirs.values():
+            os.makedirs(dir_path, exist_ok=True)
+            print(f"Created directory: {dir_path}")
         
         # Initialize model based on configuration
         try:
             if hasattr(configs.model_configs, 'model_type') and configs.model_configs.model_type.upper() == 'BASELINE':
                 model = BaselineModel(configs.model_configs)
+                print("Initialized BaselineModel")
             else:
                 model = BALM(configs.model_configs)
+                print("Initialized BALM model")
             
             model = model.to(DEVICE)
         except Exception as e:
@@ -137,8 +164,19 @@ def main():
                 if hasattr(configs.model_configs, 'model_type'):
                     model_type = configs.model_configs.model_type
                 
-                run_name = f"{model_type}_{peft_method}_testing_epoch_{epoch}"
+                run_name = f"{model_type}_{peft_method}_testing_epoch_{epoch}_{timestamp}"
                 wandb.init(project=args.wandb_project, entity=args.wandb_entity, name=run_name)
+                
+                # Log test configuration
+                wandb.config.update({
+                    "config_file": args.config_filepath,
+                    "checkpoint_path": args.checkpoint_path,
+                    "data_path": args.data_path,
+                    "data_min": data_min,
+                    "data_max": data_max,
+                    "pkd_lower_bound": pkd_lower_bound,
+                    "pkd_upper_bound": pkd_upper_bound
+                })
             except Exception as e:
                 print(f"Error initializing wandb: {e}")
                 print("Continuing without wandb logging...")
@@ -148,6 +186,8 @@ def main():
         model = model.eval()
         predictions = []
         labels = []
+        protein_seqs = []
+        proteina_seqs = []
         start = time.time()
 
         print("Starting evaluation on test set...")
@@ -181,6 +221,8 @@ def main():
                 
                 predictions.append(prediction.item())
                 labels.append(label.item())
+                protein_seqs.append(sample["Target"])
+                proteina_seqs.append(sample["proteina"])
                 
                 # Occasionally print predictions
                 if len(predictions) % 500 == 0:
@@ -226,38 +268,133 @@ def main():
         # Create regression plot
         plt.figure(figsize=(10, 8))
         ax = sns.regplot(x=labels, y=predictions)
-        ax.set_title(f"{run_name}")
+        ax.set_title(f"{model_type}_{peft_method} Evaluation (Epoch {epoch})")
         ax.set_xlabel(r"Experimental $pK_d$")
         ax.set_ylabel(r"Predicted $pK_d$")
+        
+        # Add metrics to plot
+        metrics_text = f"RMSE: {rmse.item():.4f}\n" \
+                       f"Pearson: {pearson.item():.4f}\n" \
+                       f"Spearman: {spearman.item():.4f}\n" \
+                       f"CI: {ci.item():.4f}"
+        
+        ax.text(0.05, 0.95, metrics_text, transform=ax.transAxes, 
+                verticalalignment='top', horizontalalignment='left',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
         # Save the plot
-        plot_path = os.path.join(output_dir, "regression_plot.png")
-        plt.savefig(plot_path)
+        regression_path = os.path.join(figures_dirs["evaluation"], f"regression_plot_{timestamp}.png")
+        plt.savefig(regression_path)
+        plt.close()
+        print(f"Saved regression plot to {regression_path}")
 
         # Log the plot to W&B
         if args.use_wandb:
-            wandb.log({"regression_plot": wandb.Image(plot_path)})
+            wandb.log({"regression_plot": wandb.Image(regression_path)})
 
-        # Save results to CSV
+        # Create histogram of errors
+        errors = np.array(predictions) - np.array(labels)
+        plt.figure(figsize=(10, 6))
+        sns.histplot(errors, kde=True)
+        plt.title(f"{model_type}_{peft_method} Prediction Errors")
+        plt.xlabel("Prediction Error (Predicted - True)")
+        plt.ylabel("Count")
+        
+        # Save the error histogram
+        error_hist_path = os.path.join(figures_dirs["evaluation"], f"error_histogram_{timestamp}.png")
+        plt.savefig(error_hist_path)
+        plt.close()
+
+        # Create scatter plot of errors vs true values
+        plt.figure(figsize=(10, 6))
+        sns.scatterplot(x=labels, y=errors)
+        plt.axhline(y=0, color='r', linestyle='--')
+        plt.title(f"{model_type}_{peft_method} Error vs True Value")
+        plt.xlabel("True pKd")
+        plt.ylabel("Prediction Error")
+        
+        # Save the error scatter plot
+        error_scatter_path = os.path.join(figures_dirs["evaluation"], f"error_scatter_{timestamp}.png")
+        plt.savefig(error_scatter_path)
+        plt.close()
+
+        # Save results to CSV with all data
         results_df = pd.DataFrame({
+            'Target_Sequence': protein_seqs,
+            'ProteinA_Sequence': proteina_seqs,
             'True_pKd': labels,
-            'Predicted_pKd': predictions
+            'Predicted_pKd': predictions,
+            'Error': np.array(predictions) - np.array(labels)
         })
-        results_df.to_csv(os.path.join(output_dir, "test_results.csv"), index=False)
+        
+        # Save detailed results
+        detailed_path = os.path.join(output_dir, f"test_results_detailed_{timestamp}.csv")
+        results_df.to_csv(detailed_path, index=False)
+        
+        # Save summary results (without sequences to save space)
+        summary_df = pd.DataFrame({
+            'True_pKd': labels,
+            'Predicted_pKd': predictions,
+            'Error': np.array(predictions) - np.array(labels)
+        })
+        summary_path = os.path.join(output_dir, f"test_results_summary_{timestamp}.csv")
+        summary_df.to_csv(summary_path, index=False)
 
-        # Final report
-        with open(os.path.join(output_dir, "metrics.txt"), 'w') as f:
-            f.write(f"Model: {run_name}\n")
+        # Save metrics to text file
+        metrics_path = os.path.join(output_dir, f"metrics_{timestamp}.txt")
+        with open(metrics_path, 'w') as f:
+            f.write(f"Model: {model_type}_{peft_method}\n")
+            f.write(f"Config: {args.config_filepath}\n")
+            f.write(f"Checkpoint: {args.checkpoint_path}\n")
             f.write(f"Epoch: {epoch}\n")
-            f.write(f"RMSE: {rmse.item()}\n")
-            f.write(f"Pearson: {pearson.item()}\n")
-            f.write(f"Spearman: {spearman.item()}\n")
-            f.write(f"CI: {ci.item()}\n")
+            f.write(f"Test data: {args.data_path}\n")
+            f.write(f"Number of samples: {len(labels)}\n")
+            f.write(f"Data range: {data_min:.4f} to {data_max:.4f}\n")
+            f.write(f"pKd bounds: {pkd_lower_bound:.4f} to {pkd_upper_bound:.4f}\n")
+            f.write(f"RMSE: {rmse.item():.4f}\n")
+            f.write(f"Pearson: {pearson.item():.4f}\n")
+            f.write(f"Spearman: {spearman.item():.4f}\n")
+            f.write(f"CI: {ci.item():.4f}\n")
+            f.write(f"Mean absolute error: {np.mean(np.abs(errors)):.4f}\n")
+            f.write(f"Max absolute error: {np.max(np.abs(errors)):.4f}\n")
             f.write(f"Test time: {test_time:.2f} seconds\n")
         
-        print("Results saved to:", output_dir)
+        # Save metrics as JSON for easier programmatic access
+        json_metrics = {
+            "model_type": model_type,
+            "peft_method": peft_method,
+            "epoch": epoch,
+            "test_size": len(labels),
+            "rmse": float(rmse.item()),
+            "pearson": float(pearson.item()),
+            "spearman": float(spearman.item()),
+            "ci": float(ci.item()),
+            "mean_abs_error": float(np.mean(np.abs(errors))),
+            "max_abs_error": float(np.max(np.abs(errors))),
+            "test_time": float(test_time),
+            "timestamp": timestamp
+        }
+        
+        json_path = os.path.join(output_dir, f"metrics_{timestamp}.json")
+        with open(json_path, 'w') as f:
+            import json
+            json.dump(json_metrics, f, indent=2)
+        
+        print(f"Results and metrics saved to {output_dir}")
+        print(f"Detailed results: {detailed_path}")
+        print(f"Summary results: {summary_path}")
+        print(f"Metrics (text): {metrics_path}")
+        print(f"Metrics (JSON): {json_path}")
         
         if args.use_wandb:
+            # Upload results to wandb
+            wandb.log({
+                "error_histogram": wandb.Image(error_hist_path),
+                "error_scatter": wandb.Image(error_scatter_path),
+                "detailed_results": wandb.Table(dataframe=results_df),
+                "summary_results": wandb.Table(dataframe=summary_df),
+                "metrics_json": json_metrics
+            })
             wandb.finish()
             
     except Exception as e:

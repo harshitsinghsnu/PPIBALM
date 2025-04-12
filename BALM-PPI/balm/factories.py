@@ -6,7 +6,7 @@ import pandas as pd
 class PPBAffinity:
     def __init__(self, *args, **kwargs):
         # Extract parameters
-        data_path = kwargs.get("data_path", "D:\\BALM Fineclone\\BALM-PPI\\scripts\\notebooks\\Data.csv")
+        data_path = kwargs.get("data_path", "D:\\BALM_Fineclone\\BALM-PPI\\scripts\\notebooks\\Data.csv")
         self.train_ratio = kwargs.get("train_ratio")
         
         # Check if file exists

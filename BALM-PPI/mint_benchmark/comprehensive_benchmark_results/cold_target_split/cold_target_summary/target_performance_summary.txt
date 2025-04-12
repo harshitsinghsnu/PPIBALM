@@ -1,0 +1,5 @@
+Target-specific performance summary:
+Number of targets analyzed: 201
+
+RMSE: BALM-PPI better on 202 targets, MINT better on 40 targets
+Pearson: BALM-PPI better on 113 targets, MINT better on 121 targets

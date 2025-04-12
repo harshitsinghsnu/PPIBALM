@@ -451,13 +451,17 @@ class Trainer:
                 import matplotlib.pyplot as plt
                 import seaborn as sns
                 
+                # Create figures directory
+                figures_dir = os.path.join(self.output_dir, "figures", "evaluation")
+                os.makedirs(figures_dir, exist_ok=True)
+                
                 plt.figure(figsize=(8, 6))
                 sns.regplot(x=labels_np, y=preds_np)
                 plt.title(f"{split.capitalize()} Predictions")
                 plt.xlabel("Experimental pKd")
                 plt.ylabel("Predicted pKd")
                 
-                plot_path = os.path.join(self.output_dir, f"{split}_plot.png")
+                plot_path = os.path.join(figures_dir, f"{split}_plot.png")
                 plt.savefig(plot_path)
                 plt.close()
                 

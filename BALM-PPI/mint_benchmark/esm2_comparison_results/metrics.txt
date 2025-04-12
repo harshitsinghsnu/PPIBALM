@@ -1,0 +1,8 @@
+ESM2 Model Results
+=================
+
+RMSE: 1.3491
+Pearson: 0.7891
+Spearman: 0.7834
+R²: 0.6127
+CI: 0.4980

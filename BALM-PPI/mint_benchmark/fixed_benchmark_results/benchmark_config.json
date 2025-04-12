@@ -1,0 +1,17 @@
+{
+    "data_path": "D:\\BALM_Fineclone\\BALM-PPI\\scripts\\notebooks\\Data.csv",
+    "balm_checkpoint": "D:\\BALM_Fineclone\\BALM-PPI\\outputs\\latest_checkpoint.pth",
+    "balm_config": "D:\\BALM_Fineclone\\BALM-PPI\\default_configs\\balm_peft.yaml",
+    "output_dir": "fixed_benchmark_results",
+    "batch_size": 2,
+    "num_runs": 3,
+    "seeds": [
+        42,
+        123,
+        456
+    ],
+    "split_type": "random",
+    "train_ratio": 0.2,
+    "generate_plots": true,
+    "run_all_splits": true
+}

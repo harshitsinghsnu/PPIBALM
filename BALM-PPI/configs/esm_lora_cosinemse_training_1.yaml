@@ -50,6 +50,6 @@ training_configs:
   random_seed: 1234
   device: 0
   patience: 75
-  epochs: 10
+  epochs: 100
   batch_size: 1
   outputs_dir: "outputs/lora"

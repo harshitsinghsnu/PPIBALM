@@ -1,0 +1,23 @@
+BALM-PPI vs MINT Performance Comparison
+=======================================
+
+BALM-PPI Metrics:
+  RMSE: 1.1355
+  Pearson: 0.8549
+  Spearman: 0.8532
+  R²: 0.7256
+  CI: 0.8365
+
+MINT Metrics:
+  RMSE: 1.5373
+  Pearson: 0.7259
+  Spearman: 0.7408
+  R²: 0.4970
+  CI: 0.7790
+
+Difference (MINT - BALM-PPI):
+  RMSE: 0.4019 (worse)
+  Pearson: -0.1291 (worse)
+  Spearman: -0.1124 (worse)
+  R²: -0.2286 (worse)
+  CI: -0.0575 (worse)

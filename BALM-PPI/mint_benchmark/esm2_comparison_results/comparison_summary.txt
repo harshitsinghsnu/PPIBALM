@@ -1,0 +1,23 @@
+BALM-PPI vs ESM2 Comparison
+==========================
+
+BALM-PPI Metrics:
+  RMSE: 1.1355
+  Pearson: 0.8549
+  Spearman: 0.8532
+  R²: 0.7256
+  CI: 0.4883
+
+ESM2 Metrics:
+  RMSE: 1.3491
+  Pearson: 0.7891
+  Spearman: 0.7834
+  R²: 0.6127
+  CI: 0.4980
+
+Difference (ESM2 - BALM-PPI):
+  RMSE: 0.2136 (worse)
+  Pearson: -0.0658 (worse)
+  Spearman: -0.0698 (worse)
+  R²: -0.1129 (worse)
+  CI: 0.0097 (better)
