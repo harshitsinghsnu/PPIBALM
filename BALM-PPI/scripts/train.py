@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import random # Added import
 import torch
 import numpy as np
 import pandas as pd
@@ -16,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Now import BALM modules
 from balm import common_utils
-from balm.configs import Configs
+from balm.configs import Configs, FineTuningType # Added FineTuningType
 from balm.models import BALM, BaselineModel
 from balm.metrics import get_ci, get_pearson, get_rmse, get_spearman
 
@@ -55,6 +56,19 @@ def load_checkpoint(model, optimizer, file_path):
 def main():
     # Parse command-line arguments
     args = parse_args()
+
+    # Set random seed for reproducibility
+    seed = 42 # Or args.seed if you add a seed argument to argparse
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed) # for multi-GPU
+    np.random.seed(seed)
+    random.seed(seed)
+
+    # For deterministic operations
+    # torch.backends.cudnn.deterministic = True # Can impact performance
+    # torch.backends.cudnn.benchmark = False   # Can impact performance
     
     print(f"Loading config from {args.config_filepath}")
     
@@ -64,10 +78,6 @@ def main():
     else:
         DEVICE = "cpu"
     print(f"Using device: {DEVICE}")
-    
-    # Set random seed
-    seed = 42
-    torch.cuda.manual_seed(seed)
     
     # Load config
     try:
@@ -97,13 +107,6 @@ def main():
     
     model = model.to(DEVICE)
     
-    # Check if PEFT is enabled
-    peft_method = "none"
-    if hasattr(configs.model_configs, 'peft_configs') and hasattr(configs.model_configs.peft_configs, 'enabled') and configs.model_configs.peft_configs.enabled:
-        if hasattr(configs.model_configs.peft_configs, 'protein') and hasattr(configs.model_configs.peft_configs.protein, 'method'):
-            peft_method = configs.model_configs.peft_configs.protein.method
-        print(f"PEFT method: {peft_method}")
-    
     # Initialize optimizer
     optimizer = torch.optim.AdamW(
         params=[param for name, param in model.named_parameters() if param.requires_grad],
@@ -123,12 +126,13 @@ def main():
     
     # Split data
     train_ratio = configs.dataset_configs.train_ratio if hasattr(configs.dataset_configs, 'train_ratio') else 0.2
-    random_seed = configs.training_configs.random_seed if hasattr(configs.training_configs, 'random_seed') else 1234
+    # Use the unified seed for train_test_split
+    random_state_seed = seed 
     
     train_data, test_data = train_test_split(
         df, 
         train_size=train_ratio, 
-        random_state=random_seed
+        random_state=random_state_seed # Updated to use unified seed
     )
     print(f"Number of train data: {len(train_data)}")
     print(f"Number of test data: {len(test_data)}")
@@ -139,12 +143,31 @@ def main():
         try:
             wandb.login()
             
-            # Extract model type and PEFT method for run name
-            model_type = "BALM"
-            if hasattr(configs.model_configs, 'model_type'):
-                model_type = configs.model_configs.model_type
+            # Determine model type string
+            model_type_str = "BALM" # Default
+            if hasattr(configs.model_configs, 'model_type') and configs.model_configs.model_type:
+                model_type_str = str(configs.model_configs.model_type.value).upper()
+
+
+            # Determine PEFT description for run name
+            active_peft_methods = []
+            if hasattr(configs.model_configs, 'protein_fine_tuning_type') and \
+               configs.model_configs.protein_fine_tuning_type not in [None, FineTuningType.BASELINE]:
+                   active_peft_methods.append(str(configs.model_configs.protein_fine_tuning_type.value))
             
-            run_name = f"{model_type}_{peft_method}_training"
+            if hasattr(configs.model_configs, 'proteina_fine_tuning_type') and \
+               configs.model_configs.proteina_fine_tuning_type not in [None, FineTuningType.BASELINE]:
+                   active_peft_methods.append(str(configs.model_configs.proteina_fine_tuning_type.value))
+
+            peft_description = "_".join(sorted(list(set(active_peft_methods))))
+
+            if peft_description:
+                run_name = f"{model_type_str}_{peft_description}_training"
+            else:
+                run_name = f"{model_type_str}_training"
+            
+            print(f"Wandb run name: {run_name}") # Log the generated run name
+
             wandb.init(project=args.wandb_project, entity=args.wandb_entity, name=run_name)
             
             # Log hyperparameters
@@ -278,8 +301,15 @@ def main():
                                                           pkd_upper_bound=data_max, 
                                                           pkd_lower_bound=data_min)
             else:
-                # Assume BaselineModel with direct pKd prediction (logits)
-                prediction = output["logits"]
+                # Assume BaselineModel, output["logits"] are in [-1, 1] range
+                scaled_prediction = output["logits"]
+                # Clamp to ensure it's within the expected range
+                clamped_scaled_prediction = torch.clamp(scaled_prediction, -1.0, 1.0)
+                # Scale back to original pKd range
+                pkd_range = data_max - data_min
+                prediction = ((clamped_scaled_prediction + 1.0) / 2.0) * pkd_range + data_min
+                # Final clamp to ensure it's within the original data bounds
+                prediction = torch.clamp(prediction, data_min, data_max)
             
         label = torch.tensor([sample["Y"]])
         
@@ -321,9 +351,25 @@ def main():
         })
 
     # Create regression plot
+    # Use model_type_str for consistency in plot titles
+    plot_title_model_part = model_type_str 
+    if peft_description: # peft_description was defined during wandb setup
+        plot_title_peft_part = peft_description
+    else: # Fallback if wandb was not used, recalculate peft_description
+        active_peft_methods_plot = []
+        if hasattr(configs.model_configs, 'protein_fine_tuning_type') and \
+           configs.model_configs.protein_fine_tuning_type not in [None, FineTuningType.BASELINE]:
+               active_peft_methods_plot.append(str(configs.model_configs.protein_fine_tuning_type.value))
+        if hasattr(configs.model_configs, 'proteina_fine_tuning_type') and \
+           configs.model_configs.proteina_fine_tuning_type not in [None, FineTuningType.BASELINE]:
+               active_peft_methods_plot.append(str(configs.model_configs.proteina_fine_tuning_type.value))
+        plot_title_peft_part = "_".join(sorted(list(set(active_peft_methods_plot))))
+
+    final_plot_title = f"{plot_title_model_part}_{plot_title_peft_part}_Evaluation" if plot_title_peft_part else f"{plot_title_model_part}_Evaluation"
+
     plt.figure(figsize=(10, 8))
     ax = sns.regplot(x=labels, y=predictions)
-    ax.set_title(f"{model_type}_{peft_method} Evaluation")
+    ax.set_title(final_plot_title)
     ax.set_xlabel(r"Experimental $pK_d$")
     ax.set_ylabel(r"Predicted $pK_d$")
 
@@ -337,7 +383,7 @@ def main():
     plt.plot(range(1, len(train_losses)+1), train_losses, label="Training Loss")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.title(f"{model_type}_{peft_method} - Loss Curve")
+    plt.title(f"{final_plot_title} - Loss Curve") # Use the same title structure
     plt.legend()
     plt.savefig(os.path.join(figures_dir, "loss_curve.png"))
     plt.close()
